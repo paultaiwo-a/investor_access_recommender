@@ -6,21 +6,12 @@ __pycache__/
 .ruff_cache/
 *.egg-info/
 
-# Data and artifacts (FAR-Trans is downloaded, never committed)
+# Downloaded data and the local warehouse. Not committed.
 data/raw/*
 !data/raw/.gitkeep
 data/*.duckdb
 data/*.duckdb.wal
-data/processed/
-artifacts/
-mlruns/
-mlflow.db
-
-# dbt
-dbt/target/
-dbt/dbt_packages/
-dbt/logs/
-logs/
+results/
 
 # Misc
 .DS_Store

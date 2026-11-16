@@ -1,4 +1,4 @@
-.PHONY: help setup data warehouse baselines evaluate test lint format all
+.PHONY: help setup data warehouse evaluate test lint format all
 
 help:  ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-12s %s\n", $$1, $$2}'
@@ -13,10 +13,8 @@ data:  ## Download FAR-Trans into data/raw
 warehouse:  ## Load the csvs into DuckDB
 	uv run python -m recs.warehouse
 
-baselines:  ## Evaluate popularity / recent-popularity / item-item baselines
-	uv run python -m recs.pipelines.baselines
-
-evaluate: baselines  ## Run the offline evaluation
+evaluate:  ## Score popularity and item-item on the test window
+	uv run python -m recs.run
 
 test:  ## Run the test suite
 	uv run pytest

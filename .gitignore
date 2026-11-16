@@ -1,18 +1,9 @@
-# Python
 __pycache__/
-*.py[cod]
 .venv/
-.pytest_cache/
-.ruff_cache/
-*.egg-info/
+.ipynb_checkpoints/
+.DS_Store
 
-# Downloaded data and the local warehouse. Not committed.
+# downloaded and cleaned data, not committed
 data/raw/*
 !data/raw/.gitkeep
-data/*.duckdb
-data/*.duckdb.wal
-results/
-
-# Misc
-.DS_Store
-.ipynb_checkpoints/
+data/processed/

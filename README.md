@@ -1,50 +1,23 @@
-# Investor access recommender
+Project Walkthrough
 
-Project walkthrough
 
-This suggests assets a customer has not bought yet. The data is FAR-Trans, retail investment transactions from a Greek bank, 2018 to 2022.
 
-## Cleaning
 
-`sql/prepare.sql` loads the csv files into DuckDB.
+Notebook #1 - Data Pre-processing
 
-It keeps one row per transaction, drops prices that are missing or zero, and keeps the latest description of each asset. Buys are labeled from the date:
+In this notebook, the transactions were loaded and cleaned. Duplicate transaction ids were dropped, and only buys were kept.
 
-- train: before 30 Nov 2021
-- validation: 30 Nov 2021 up to 30 May 2022
-- test: 30 May 2022 up to 30 Nov 2022
+Buys by year and the assets bought by the most customers were checked. The plots are matplotlib. The cleaned buys were exported as a csv for the next notebook.
 
-## Models
 
-Both models only see buys from before 30 May 2022.
 
-Popularity. Suggest the assets that the most customers bought.
+Notebook #2 - Modelling
 
-Item-item. If you bought an asset, suggest other assets that the same customers tended to buy.
+In this notebook, the cleaned buys were used to suggest assets a customer had not bought yet. The two models were popularity and item-item.
 
-Anything the customer already bought is left off the list. An asset is only suggested if it has a price at the cutoff and at the end of the test window.
+Recall@10 and nDCG@10 were compared on buys from 30 May 2022 to 30 Nov 2022. Item-item scored higher on both.
 
-## Scores
 
-Recall@10 and nDCG@10. These are averaged over customers who bought something new in the test window. A repeat buy of an asset they already held does not count.
 
-`avg_return` is the average price change of the suggested assets over the test window. The models are not fit to maximize that. It is just a check.
 
-## How to run
-
-Needs [uv](https://docs.astral.sh/uv/) and Python 3.12.
-
-```bash
-make setup
-make data
-make evaluate
-```
-
-`make test` uses a small made-up dataset. It does not need the download.
-
-## Data
-
-FAR-Trans is from the University of Glasgow under CC-BY 4.0.
-<https://doi.org/10.5525/gla.researchdata.1658>
-
-Javier Sanz-Cruzado, Nikolaos Droukas, Richard McCreadie. FAR-Trans: An Investment Dataset for Financial Asset Recommendation. IJCAI 2024 workshop on recommender systems in finance.
+The notebooks use pandas, numpy, and matplotlib. Notebook 1 downloads the FAR-Trans csv if it is not already in data/raw.

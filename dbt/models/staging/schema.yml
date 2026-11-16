@@ -1,0 +1,58 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: Cleaned FAR-Trans transactions.
+    columns:
+      - name: transaction_id
+        data_tests: [unique, not_null]
+      - name: customer_id
+        data_tests: [not_null]
+      - name: isin
+        data_tests: [not_null]
+      - name: transaction_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["buy", "sell"]
+      - name: transaction_date
+        data_tests: [not_null]
+
+  - name: stg_assets
+    description: Latest description per asset, with asset_group for concentration rules.
+    columns:
+      - name: isin
+        data_tests: [unique, not_null]
+      - name: asset_category
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Stock", "Bond", "MTF"]
+      - name: asset_group
+        data_tests: [not_null]
+
+  - name: stg_prices
+    description: Daily close prices.
+    data_tests:
+      - dbt_utils_unique_combination:
+          arguments:
+            columns: [isin, price_date]
+    columns:
+      - name: close_price
+        data_tests: [not_null]
+
+  - name: stg_customers
+    description: Customer profile history (SCD2 style).
+    columns:
+      - name: customer_id
+        data_tests: [not_null]
+      - name: risk_level
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Conservative", "Income", "Balanced", "Aggressive", "Not_Available"]
+
+  - name: stg_markets
+    columns:
+      - name: market_id
+        data_tests: [not_null]

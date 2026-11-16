@@ -1,0 +1,23 @@
+name: far_trans
+version: "1.0.0"
+config-version: 2
+profile: far_trans
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Temporal split boundaries; keep in sync with src/recs/config.py
+  val_start: "2021-11-30"
+  test_start: "2022-05-30"
+  test_end: "2022-11-30"
+
+models:
+  far_trans:
+    staging:
+      +materialized: table
+    marts:
+      +materialized: table

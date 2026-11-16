@@ -1,0 +1,7 @@
+far_trans:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('RECS_DB_PATH', '../data/warehouse.duckdb') }}"
+      threads: 4

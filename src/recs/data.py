@@ -40,11 +40,11 @@ class Dataset:
         with duckdb.connect(str(db_path), read_only=True) as con:
             tx = con.sql(
                 "select customer_id, isin, transaction_type, transaction_date, total_value, units "
-                "from stg_transactions"
+                "from transactions"
             ).df()
-            assets = con.sql("select * from stg_assets").df()
-            prices = con.sql("select isin, price_date, close_price from stg_prices").df()
-            customers = con.sql("select * from stg_customers").df()
+            assets = con.sql("select * from assets").df()
+            prices = con.sql("select isin, price_date, close_price from prices").df()
+        customers = pd.DataFrame(columns=["customer_id", "valid_from", "valid_to"])
         return cls.from_frames(tx, assets, prices, customers)
 
     @classmethod

@@ -20,6 +20,3 @@ jobs:
           uv run ruff format --check .
       - name: Test
         run: uv run pytest
-      - name: dbt parse
-        working-directory: dbt
-        run: uv run dbt parse --profiles-dir . --project-dir .

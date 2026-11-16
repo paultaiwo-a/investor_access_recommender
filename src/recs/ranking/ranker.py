@@ -24,6 +24,7 @@ from recs.candidates.hybrid import HybridCandidates
 from recs.config import N_CANDIDATES, PROFIT_HORIZON_DAYS, SEED
 from recs.data import Dataset, Snapshot, make_snapshot
 from recs.ranking.features import FEATURES, attach_labels, build_features, item_features
+from recs.rules.risk import max_srri
 
 # 12 training cutoffs, four weeks apart, the latest 26 weeks before deployment.
 TRAIN_OFFSETS_DAYS = tuple(182 + 28 * i for i in range(12))
@@ -46,6 +47,10 @@ DEFAULT_LGB = {
 }
 
 
+def _float_cols(df: pd.DataFrame) -> list[str]:
+    return [c for c in df.columns if df[c].dtype == "float64"]
+
+
 @dataclass
 class FrameBuilder:
     """Builds (and caches) labelled candidate frames per cutoff."""
@@ -57,22 +62,47 @@ class FrameBuilder:
     _cache: dict = field(default_factory=dict, repr=False)
 
     def frame(
-        self, cutoff: pd.Timestamp, end: pd.Timestamp | None = None, users: list[str] | None = None
+        self,
+        cutoff: pd.Timestamp,
+        end: pd.Timestamp | None = None,
+        users: list[str] | None = None,
+        suitable_only: bool = False,
+        all_users: bool = False,
     ) -> tuple[pd.DataFrame, Snapshot]:
+        """Candidates + features (+ labels) at ``cutoff``.
+
+        ``suitable_only`` restricts each customer's candidate pool to assets their risk profile
+        allows, so the suitability layer does not empty the list. ``all_users`` scores every
+        customer with history (serving) instead of only those with targets (evaluation).
+        """
         cutoff = pd.Timestamp(cutoff)
         end = None if end is None else pd.Timestamp(end)
-        key = (cutoff, end, None if users is None else tuple(users))
-        if key not in self._cache:
-            snap = make_snapshot(self.ds, cutoff, self.horizon_days, end=end)
-            if not snap.users:
-                self._cache[key] = (pd.DataFrame(columns=["customer_id", "isin", "label"]), snap)
-                return self._cache[key]
-            gen = HybridCandidates(self.als_params).fit(snap)
-            us = snap.users if users is None else users
+        key = (cutoff, end, None if users is None else tuple(users), suitable_only, all_users)
+        if key in self._cache:
+            return self._cache[key]
+        snap = make_snapshot(
+            self.ds, cutoff, self.horizon_days, end=end, require_targets=not all_users
+        )
+        us = snap.users if users is None else users
+        if not us:
+            self._cache[key] = (pd.DataFrame(columns=["customer_id", "isin", "label"]), snap)
+            return self._cache[key]
+        gen = HybridCandidates(self.als_params).fit(snap)
+        items = item_features(self.ds, cutoff)
+        if suitable_only:
+            profile = self.ds.customer_profile(cutoff)["risk_level"]
+            limits = pd.Series([max_srri(profile.get(u)) for u in us], index=us, dtype=int)
+            srri = items["srri"].reindex(snap.eligible_items)
+            parts = []
+            for limit, group in limits.groupby(limits):
+                pool = srri.index[srri <= limit].tolist()
+                parts.append(gen.candidates(group.index.tolist(), pool, n=self.n_candidates))
+            cands = pd.concat(parts, ignore_index=True)
+        else:
             cands = gen.candidates(us, snap.eligible_items, n=self.n_candidates)
-            items = item_features(self.ds, cutoff)
-            df = attach_labels(build_features(snap, cands, items), snap)
-            self._cache[key] = (df, snap)
+        df = attach_labels(build_features(snap, cands, items), snap)
+        df[_float_cols(df)] = df[_float_cols(df)].astype("float32")
+        self._cache[key] = (df, snap)
         return self._cache[key]
 
     def training_frame(

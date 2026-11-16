@@ -1,0 +1,12 @@
+.venv
+.git
+data
+mlruns
+mlflow.db
+dbt/target
+dbt/logs
+results
+tests
+docs
+**/__pycache__
+artifacts/*.pkl

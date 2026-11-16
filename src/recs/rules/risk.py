@@ -54,8 +54,14 @@ def default_srri(category: str, subcategory: str | None) -> int:
     return CATEGORY_DEFAULT_SRRI.get((category, subcategory), 5)
 
 
+# Lowest class an asset type can get. A single stock with a near-flat price is usually
+# suspended, not safe, so measured volatility alone must not make it look low risk.
+CATEGORY_FLOOR_SRRI = {"Stock": 5}
+
+
 def asset_srri(vol: pd.Series, assets: pd.DataFrame) -> pd.Series:
-    """SRRI per asset: measured from volatility, falling back to the category default."""
+    """SRRI per asset: measured from volatility, falling back to the category default and
+    never below the category floor."""
     a = assets.set_index("isin")
     measured = pd.Series(srri_from_vol(vol.reindex(a.index).to_numpy()), index=a.index)
     fallback = pd.Series(
@@ -66,7 +72,8 @@ def asset_srri(vol: pd.Series, assets: pd.DataFrame) -> pd.Series:
         index=a.index,
         dtype=float,
     )
-    return measured.fillna(fallback).astype(int)
+    floor = a["asset_category"].map(CATEGORY_FLOOR_SRRI).fillna(1)
+    return measured.fillna(fallback).clip(lower=floor).astype(int)
 
 
 def max_srri(risk_level: str | None) -> int:

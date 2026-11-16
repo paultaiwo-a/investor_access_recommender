@@ -14,7 +14,8 @@ from recs.rules.risk import RISK_ORDINAL, asset_srri, max_srri
 
 TRADING_DAYS = 252
 CATEGORICAL = ["asset_category", "asset_subcategory", "customer_type"]
-CAPACITY_ORDINAL = {"CAP_LT_30K": 0, "CAP_30K_80K": 1, "CAP_80K_300K": 2, "CAP_GT300K": 3}
+# Note: the data spells these without the underscore the dataset README shows (CAP_LT30K).
+CAPACITY_ORDINAL = {"CAP_LT30K": 0, "CAP_30K_80K": 1, "CAP_80K_300K": 2, "CAP_GT300K": 3}
 
 
 # ---------------------------------------------------------------------- item features
@@ -39,6 +40,11 @@ def price_features(ds: Dataset, cutoff: pd.Timestamp) -> pd.DataFrame:
         v = w.std() * np.sqrt(TRADING_DAYS)
         return v.where(w.count() >= 20)
 
+    # Days since the price last moved; long flat stretches usually mean a trading suspension.
+    moved = bd.diff().ne(0) & bd.notna()
+    last_move = moved.apply(lambda c: c[c].index.max() if c.any() else pd.NaT)
+    stale_days = (cutoff - pd.to_datetime(last_move)).dt.days
+
     y = bd[bd.index >= cutoff - pd.Timedelta(days=365)]
     drawdown = (y / y.cummax() - 1.0).min()
     first_price = ds.prices.groupby("isin")["price_date"].min()
@@ -52,6 +58,7 @@ def price_features(ds: Dataset, cutoff: pd.Timestamp) -> pd.DataFrame:
             "vol_12m": vol(365),
             "max_drawdown_12m": drawdown,
             "days_priced": (cutoff - first_price).dt.days.reindex(wide.columns),
+            "stale_days": stale_days,
         }
     )
     out["sharpe_12m"] = out["ret_12m"] / out["vol_12m"].replace(0, np.nan)

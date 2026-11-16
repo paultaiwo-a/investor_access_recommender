@@ -69,3 +69,18 @@ def test_violations_report():
     assert v["lists_with_unsuitable_risk"] == 0.5
     assert v["lists_breaking_sector_cap"] == 0.5
     assert v["unsuitable_item_share"] == pytest.approx(5 / 7)
+
+
+def test_flat_priced_stock_is_not_low_risk():
+    from recs.rules.risk import asset_srri
+
+    assets = pd.DataFrame(
+        {
+            "isin": ["S", "M"],
+            "asset_category": ["Stock", "MTF"],
+            "asset_subcategory": ["Unspecified", "Money Market"],
+        }
+    )
+    out = asset_srri(pd.Series({"S": 0.0, "M": 0.001}), assets)
+    assert out["S"] >= 5
+    assert out["M"] == 1

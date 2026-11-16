@@ -169,6 +169,19 @@ def eligible_assets(ds: Dataset, cutoff: pd.Timestamp, end: pd.Timestamp) -> lis
     return sorted(ds.forward_returns(cutoff, end).index)
 
 
+def serving_snapshot(ds: Dataset, as_of: str | pd.Timestamp) -> Snapshot:
+    """Snapshot for live scoring: every customer with history, every asset priced at ``as_of``.
+
+    There is no future yet, so targets and forward returns are empty.
+    """
+    as_of = pd.Timestamp(as_of)
+    history = history_before(ds.buys, as_of)
+    eligible = sorted(ds.price_on(as_of).dropna().index)
+    users = sorted(set(history["customer_id"]))
+    empty = pd.Series(np.nan, index=eligible)
+    return Snapshot(as_of, as_of, history, {}, users, eligible, empty, ds)
+
+
 def make_snapshot(
     ds: Dataset,
     cutoff: str | pd.Timestamp,

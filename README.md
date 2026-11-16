@@ -3,21 +3,26 @@ Project Walkthrough
 
 
 
-Notebook #1 - Data Pre-processing
+clean.py
 
-In this notebook, the transactions were loaded and cleaned. Duplicate transaction ids were dropped, and only buys were kept.
+The transactions are loaded and cleaned. Duplicate transaction ids are dropped, and only buys are kept.
 
-Buys by year and the assets bought by the most customers were checked. The plots are matplotlib. The cleaned buys were exported as a csv for the next notebook.
-
-
-
-Notebook #2 - Modelling
-
-In this notebook, the cleaned buys were used to suggest assets a customer had not bought yet. The two models were popularity and item-item.
-
-Recall@10 and nDCG@10 were compared on buys from 30 May 2022 to 30 Nov 2022. Item-item scored higher on both.
+Buys by year and the assets bought by the most customers are plotted with matplotlib. The charts are saved in figures/. The cleaned buys are written to data/processed/buys.csv.
 
 
 
+model.py
 
-The notebooks use pandas, numpy, and matplotlib. Notebook 1 downloads the FAR-Trans csv if it is not already in data/raw.
+The cleaned buys are used to suggest assets a customer has not bought yet. The two models are popularity and item-item.
+
+Recall@10 and nDCG@10 are compared on buys from 30 May 2022 to 30 Nov 2022. Item-item scored higher on both.
+
+
+
+
+The scripts use pandas, numpy, and matplotlib. clean.py downloads the FAR-Trans csv if it is not already in data/raw.
+
+```bash
+python clean.py
+python model.py
+```

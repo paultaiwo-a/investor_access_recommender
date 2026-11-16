@@ -28,9 +28,9 @@ Relevance is a customer's **first-time buy** of an asset in the window (the FAR-
 
 * The ranker beats popularity by **+60% nDCG@10** and ALS by +7%. MAP shows the biggest gain
   over the fused list it reorders (+5%), because it mainly moves the right asset higher.
-* Its suggestions also did best on the profitability check: an equal-weight portfolio of each
-  customer's top 10 returned +0.51% a month over the next six months while the market average
-  lost 0.46% a month. One window is not enough to call this skill, see the rolling benchmark.
+* In this window its suggestions also did best on the profitability check (+0.51% a month vs
+  -0.46% for the market). That does not hold up across the rolling benchmark below, where every
+  transaction-based model trails the market.
 * Full tables: [`results/ranker_fixed_split.md`](results/ranker_fixed_split.md) (val and test),
   [`results/mf_tuning.md`](results/mf_tuning.md), [`results/ranker_tuning.md`](results/ranker_tuning.md).
 
@@ -38,21 +38,36 @@ Relevance is a customer's **first-time buy** of an asset in the window (the FAR-
 
 The paper ([Sanz-Cruzado et al., 2024](https://arxiv.org/abs/2407.08692)) averages over 61
 cutoffs, two weeks apart from 2019-08-01, each with a six-month test window. This repo
-reimplements that protocol (`recs.eval.runner.paper_cutoffs`). The replicated baselines land
-within 0.002 of the published numbers, which is a good check that the protocol matches.
+reimplements that protocol (`recs.eval.runner.paper_cutoffs`).
 
-| Model | Paper nDCG@10 | This repo nDCG@10 | Paper ROI@10 (monthly) | This repo ROI@10 |
-|---|---:|---:|---:|---:|
-| Random | 0.0106 | 0.0107 | 0.71% | 0.76% |
-| Popularity | 0.2710 | 0.2724 | 0.06% | 0.08% |
-| Matrix factorisation | 0.1780 | | 0.38% | |
-| LightGCN (paper's best nDCG) | 0.3404 | | 0.04% | |
-| Recent popularity (this repo) | | 0.2986 | | -0.48% |
-| Item-item kNN (this repo) | | 0.3385 | | -0.04% |
-| Market average | | | 0.79% | 0.82% |
+Paper numbers are from its Table 2 (61 cutoffs). "All 61" is this repo on the same 61 cutoffs;
+"31" is every second cutoff, the set used to run the ranker (about an hour on 4 cores).
 
-All 61 cutoffs; source [`results/baselines_rolling.md`](results/baselines_rolling.md). The ranker
-rows on the same protocol are produced by `make rolling`.
+| Model | Paper nDCG@10 | This repo, all 61 | This repo, 31 | Paper monthly ROI@10 | This repo, 31 |
+|---|---:|---:|---:|---:|---:|
+| Random | 0.0106 | 0.0107 | 0.0106 | +0.71% | +0.71% |
+| Popularity | 0.2710 | 0.2724 | 0.2727 | +0.06% | -0.04% |
+| Matrix factorisation (paper) / BPR (here) | 0.1780 | | 0.2095 | +0.38% | +0.60% |
+| UB kNN (paper) / item-item kNN (here) | 0.1599 | 0.3385 | 0.3400 | +1.19% | -0.19% |
+| LightGCN (paper's best nDCG) | 0.3404 | | | +0.04% | |
+| Hybrid-nDCG, LambdaMART (paper) | 0.2313 | | | +0.63% | |
+| ALS | | | 0.3514 | | -0.38% |
+| Fused candidates (RRF) | | | 0.3640 | | -0.61% |
+| **Two-stage ranker** | | | **0.3654** | | -0.40% |
+| Market average | | | | +0.79% | +0.76% |
+
+* The replicated random and popularity baselines land within 0.002 nDCG of the published
+  numbers, so the protocol matches.
+* The two-stage ranker (0.365) scores above the paper's best model, LightGCN (0.340), and well
+  above its LambdaMART hybrid (0.231). It beats popularity at 31 of 31 cutoffs, item-kNN at 30
+  and ALS at 29.
+* **Over the fused candidate list its lead is small**: 0.365 vs 0.364 on average, ahead at 22
+  of 31 cutoffs. Most of the gain comes from candidate fusion; the ranker adds a consistent
+  but modest reordering gain.
+* **None of the transaction-based models beat the market on returns** across the rolling
+  window, matching the paper's finding. The fixed-split test window, where the ranker did beat
+  the market, was a favourable draw. Source:
+  [`results/rolling_all_models.md`](results/rolling_all_models.md).
 
 ## Architecture
 
@@ -261,7 +276,8 @@ tests/                  48 tests on a synthetic dataset
   suggestions. That is the standard offline setup, but it rewards predicting the herd. The
   A/B test, not these tables, decides whether the ranker is better.
 * **Profitability is one market path.** Monthly ROI@10 depends heavily on the window. The
-  rolling benchmark is the fairer read; even there, no model here was tuned for returns.
+  rolling benchmark is the fairer read, and there no transaction-based model beats the market.
+  Nothing here was tuned for returns.
 * **Risk classes are approximations.** SRRI is defined on five years of weekly returns for
   funds. This repo uses one year of daily returns for every asset, plus a floor for stocks.
 * **Paper comparison is close, not exact.** The paper used its own implementations and tuned

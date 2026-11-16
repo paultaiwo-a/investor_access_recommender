@@ -168,6 +168,8 @@ def build(
     # Cold start: trending suitable assets per risk level, sector-capped
     trending = items.loc[tradable].sort_values(["buyers_30d", "buyers_90d"], ascending=False)
     fb = []
+    n_buyers = items["buyers_30d"].fillna(0).astype(int)
+    srri_int = items["srri"].astype(int)
     for lvl in [*RISK_LEVELS, "Not_Available"]:
         kept = rules.apply(
             trending.index.tolist(), lvl, items["srri"].to_dict(), items["asset_group"].to_dict()
@@ -180,9 +182,8 @@ def build(
                     "isin": isin,
                     "reasons": json.dumps(
                         [
-                            f"Trending: {int(items.loc[isin, 'buyers_30d'])} customers bought it in the "
-                            "last 30 days",
-                            f"Fits a {lvl} risk profile (risk class {int(items.loc[isin, 'srri'])} of 7, "
+                            f"Trending: {n_buyers[isin]} customers bought it in the last 30 days",
+                            f"Fits a {lvl} risk profile (risk class {srri_int[isin]} of 7, "
                             f"limit {MAX_SRRI[lvl]})",
                         ]
                     ),
